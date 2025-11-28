@@ -4,7 +4,11 @@
   "description": "Lightweight scripting language based on JavaScript that runs in browser with simpler syntax.",
   "main": "dist/zs.js",
   "module": "dist/zs.js",
-  "types": "src/index.d.ts", 
+  "types": "src/index.d.ts",
+  "files": [
+    "dist/", 
+    "src/index.d.ts"
+  ], 
   "keywords": [
     "zoroon",
     "zs",
@@ -23,5 +27,8 @@
   },
   "bugs": {
     "url": "https://github.com/KhairyK/zoroonscript/issues"
-  },
+  }, 
+ "engines": {
+  "node": ">=18"
+  }
 }
