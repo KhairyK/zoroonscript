@@ -1,5 +1,5 @@
 {
-  "name": "@zoroon/script",
+  "name": "@kyrt/script",
   "version": "1.0.0",
   "description": "Lightweight scripting language based on JavaScript that runs in browser with simpler syntax.",
   "main": "dist/zs.js",
