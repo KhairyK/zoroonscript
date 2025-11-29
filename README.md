@@ -19,7 +19,7 @@ ZoroonScript adalah bahasa scripting ringan berbasis JavaScript yang menyediakan
 ## 🚀 Cara Pakai di HTML
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/zoroonscript/dist/zs.min.js"></script>
+<script src="https://cdn.kyrt.my.id/libs/js/zs/1.0.0/zs.min.js"></script>
 
 <script type="application/x-opendnf-zs">
 @set name = "Zoroon"
@@ -55,4 +55,4 @@ runZS('@log("Hello World"');
 
 🔗 License
 
-MIT License © 2025 Zoroon / OpenDN FFoundatio
+MIT License © 2025 Zoroon / OpenDN Foundation
