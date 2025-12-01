@@ -1,4 +1,3 @@
-// MIT LICENSE
 (() => {
   "use strict";
 
@@ -117,18 +116,29 @@
   });
 
   /* ────── AUTO-EXECUTE ZS SCRIPT TAGS ────── */
-  document.querySelectorAll('script[type="application/x-opendnf-zs"]').forEach(async s => {
-    try {
-      if (s.src) {
-        const res = await fetch(s.src);
-        const text = await res.text();
-        await runZS(text);
-      } else {
-        await runZS(s.textContent);
+  const runAuto = async () => {
+  document.querySelectorAll('script[type="application/x-opendnf-zs"]:not([data-zs-executed])')
+    .forEach(async s => {
+      s.setAttribute("data-zs-executed", "1");
+      try {
+        if (s.src) {
+          const res = await fetch(s.src);
+          const text = await res.text();
+          await runZS(text);
+        } else {
+          await runZS(s.textContent);
+        }
+      } catch (err) {
+        console.error("[ZoroonScript] Error executing ZS script tag:", err);
       }
-    } catch (err) {
-      console.error("[ZoroonScript] Error executing ZS script tag:", err);
-    }
-  });
+    });
+};
+
+runAuto();
+
+new MutationObserver(runAuto).observe(document.documentElement, {
+  childList: true,
+  subtree: true
+});
 
 })();
