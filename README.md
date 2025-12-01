@@ -13,6 +13,12 @@ ZoroonScript adalah bahasa scripting ringan berbasis JavaScript yang menyediakan
 | Events | `@on click #btn { log "Clicked!" }` | `document.querySelector("#btn").addEventListener("click", () => console.log("Clicked!"))` |
 | Logging | `@log("x")` | `console.log(x)` |
 | Import | `@import "mod.zs" -> app` | fetch + run modul |
+| LocalStorage / Session | `@save key = "value"` | `@load key` |
+| Timer Utilities | `@interval 1000 { @log "tick" }` | `@timeout 2000 { @log "done" }` |
+| ClassToggle | `@toggle #btn "active"` | `@addClass #box "shown"` | `@removeClass #box "hide"` |
+
+
+
 
 ---
 
