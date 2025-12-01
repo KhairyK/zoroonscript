@@ -57,6 +57,8 @@
     js = js.replace(/@while\s*\((.+?)\)\s*{/g, 'while ($1) {');
     js = js.replace(/@on\s+(\w+)\s+([#.\w-]+)\s*{/g,
     'document.querySelector("$2").addEventListener("$1", () => {');
+    js = js.replace(/@repeat\s+(\d+)\s*\{([\s\S]*?)\}/g, (_, n, body) => `for (let i = 0; i < ${n}; i++) { ${body} }`);
+
 
     /* ————— LOCALSTORAGE / SESSION ———— */
     js = js.replace(/@save\s+(\w+)\s*=\s*(.+)/g, 'localStorage.setItem("$1", $2)');
@@ -71,7 +73,6 @@
     js = js.replace(/@addClass\s+([#.\w-]+)\s+"([^"]+)"/g, 'document.querySelector("$1").classList.add("$2")');
     js = js.replace(/@removeClass\s+([#.\w-]+)\s+"([^"]+)"/g, 'document.querySelector("$1").classList.remove("$2")');
 
-    
     /* ────── CLEANUP ────── */
     js = js.replace(/\n\s*\n/g, '\n');
 
