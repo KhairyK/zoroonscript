@@ -9,13 +9,24 @@ ZoroonScript adalah bahasa scripting ringan berbasis JavaScript yang menyediakan
 |-------|--------|--------|
 | Fungsi | `@function test { ... }` | `function test() { ... }` |
 | Variabel | `@set a = 10` | `const a = 10` |
+| Variabel (mutable) | `@var a = 10` | `let a = 10` |
 | DOM Text | `@element #title { text "Hello" }` | `document.querySelector("#title").textContent = "Hello"` |
-| Events | `@on click #btn { log "Clicked!" }` | `document.querySelector("#btn").addEventListener("click", () => console.log("Clicked!"))` |
+| DOM HTML | `@element #box { html "<b>Hi</b>" }` | `document.querySelector("#box").innerHTML = "<b>Hi</b>"` |
+| Events | `@on click #btn { log "Clicked!" }` | `document.querySelector("#btn").addEventListener("click", () => { console.log("Clicked!") })` |
 | Logging | `@log("x")` | `console.log(x)` |
-| Import | `@import "mod.zs" -> app` | fetch + run modul |
-| LocalStorage / Session | `@save key = "value"` | `@load key` |
-| Timer Utilities | `@interval 1000 { @log "tick" }` | `@timeout 2000 { @log "done" }` |
-| ClassToggle | `@toggle #btn "active"` | `@addClass #box "shown"` | `@removeClass #box "hide"` |
+| Logging string | `@log "Hello"` | `console.log("Hello")` |
+| Import | `@import "mod.zs" -> app` | `const app = await __ZS_IMPORT__("mod.zs", "app");` |
+| Export | `@export myFn` | `exports["myFn"] = myFn` |
+| LocalStorage Save | `@save token = "abc123"` | `localStorage.setItem("token", "abc123")` |
+| LocalStorage Load | `@load token` | `localStorage.getItem("token")` |
+| Timer Interval | `@interval 1000 { log "tick" }` | `setInterval(() => { console.log("tick") }, 1000)` |
+| Timer Timeout | `@timeout 2000 { log "done" }` | `setTimeout(() => { console.log("done") }, 2000)` |
+| Class Toggle | `@toggle #btn "active"` | `document.querySelector("#btn").classList.toggle("active")` |
+| Class Add | `@addClass #box "shown"` | `document.querySelector("#box").classList.add("shown")` |
+| Class Remove | `@removeClass #box "hide"` | `document.querySelector("#box").classList.remove("hide")` |
+| Repeat | `@repeat 5 { log "Hello" }` | `for (let i = 0; i < 5; i++) { console.log("Hello") }` |
+
+
 
 
 
