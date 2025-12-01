@@ -57,6 +57,20 @@
     js = js.replace(/@while\s*\((.+?)\)\s*{/g, 'while ($1) {');
     js = js.replace(/@on\s+(\w+)\s+([#.\w-]+)\s*{/g,
     'document.querySelector("$2").addEventListener("$1", () => {');
+
+    /* ————— LOCALSTORAGE / SESSION ———— */
+    js = js.replace(/@save\s+(\w+)\s*=\s*(.+)/g, 'localStorage.setItem("$1", $2)');
+    js = js.replace(/@load\s+(\w+)/g, 'localStorage.getItem("$1")');
+
+    /* ————— TIME UTILITIES ———— */
+    js = js.replace(/@interval\s+(\d+)\s*{\s*([^}]*)\s*}/g, 'setInterval(() => { $2 }, $1)');
+    js = js.replace(/@timeout\s+(\d+)\s*{\s*([^}]*)\s*}/g, 'setTimeout(() => { $2 }, $1)');
+
+    /* ————— CLASS TOGGLE ———— */
+    js = js.replace(/@toggle\s+([#.\w-]+)\s+"([^"]+)"/g, 'document.querySelector("$1").classList.toggle("$2")');
+    js = js.replace(/@addClass\s+([#.\w-]+)\s+"([^"]+)"/g, 'document.querySelector("$1").classList.add("$2")');
+    js = js.replace(/@removeClass\s+([#.\w-]+)\s+"([^"]+)"/g, 'document.querySelector("$1").classList.remove("$2")');
+
     
     /* ────── CLEANUP ────── */
     js = js.replace(/\n\s*\n/g, '\n');
