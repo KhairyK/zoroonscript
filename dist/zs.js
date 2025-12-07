@@ -1,159 +1,52 @@
-(() => {
-  "use strict";
-
-  function transpileZS(code) {
-    let js = String(code);
-
-    /* ────── NORMALIZE LINE ENDINGS ────── */
-    js = js.replace(/\r/g, '');
-
-    /* ────── FUNCTION SUPPORT ────── */
-    js = js.replace(/@function\s+(\w+)\s*\(([^)]*)\)\s*{\s*([^}]*)\s*}/g, 'function $1($2) { $3 }');
-    js = js.replace(/@function\s+(\w+)\s*{\s*([^}]*)\s*}/g, 'function $1() { $2 }');
-
-    /* ────── CALL (support dot-notation like obj.fn) ────── */
-    js = js.replace(/@call\s+([^\s(]+)\s*\(([^)]*)\)/g, '$1($2)');
-    js = js.replace(/@call\s+([^\s(]+)/g, '$1()');
-
-    /* ────── VARIABLE ────── */
-    js = js.replace(/@set\s+(\w+)\s*=\s*(.+)/g, 'const $1 = $2');
-    js = js.replace(/@var\s+(\w+)\s*=\s*(.+)/g, 'let $1 = $2');
-
-    /* ────── DOM ────── */
-    js = js.replace(/@element\s+([#.\w-]+)\s*{\s*text\s+"([^"]+)"\s*}/g, 'document.querySelector("$1").textContent = "$2"');
-    js = js.replace(/@element\s+([#.\w-]+)\s*{\s*html\s+"([^"]+)"\s*}/g, 'document.querySelector("$1").innerHTML = "$2"');
-    js = js.replace(/@id\s+#([\w-]+)/g, 'document.getElementById("$1")');
-    js = js.replace(/@select\s+([#.][\w-]+)/g, 'document.querySelector("$1")');
-    js = js.replace(/@all\s+([#.][\w-]+)/g, 'document.querySelectorAll("$1")');
-    js = js.replace(/append\s+"([^"]+)"/g, 'insertAdjacentHTML("beforeend", "$1")');
-
-    /* ────── EVENTS ────── */
-    js = js.replace(/@on\s+(\w+)\s+([#.\w-]+)\s*{\s*log\s+"([^"]+)"\s*}/g, 'document.querySelector("$2").addEventListener("$1", () => console.log("$3"))');
-    js = js.replace(/@on\s+(\w+)\s+([#.\w-]+)\s*{\s*([^}]*)\s*}/g, 'document.querySelector("$2").addEventListener("$1", () => { $3 })');
-
-    /* ────── LOG / WARN / INFO / ERROR ————— */
-    js = js.replace(/@log\s+"([^"]+)"/g, 'console.log("$1")');
-    js = js.replace(/@warn\s+"([^"]+)"/g, 'console.warn("$1")');
-    js = js.replace(/@info\s+"([^"]+)"/g, 'console.info("$1")');
-    js = js.replace(/@error\s+"([^"]+)"/g, 'console.error("$1")');
-
-    js = js.replace(/@log\s*\(\s*([^)]+)\s*\)/g, 'console.log($1)');
-    js = js.replace(/@warn\s*\(\s*([^)]+)\s*\)/g, 'console.warn($1)');
-    js = js.replace(/@info\s*\(\s*([^)]+)\s*\)/g, 'console.info($1)');
-    js = js.replace(/@error\s*\(\s*([^)]+)\s*\)/g, 'console.error($1)');
-
-    /* ────── INLINE text/html ────── */
-    js = js.replace(/text\s+"([^"]+)"/g, '"$1"');
-    js = js.replace(/html\s+"([^"]+)"/g, '"$1"');
-
-    /* ────── EXPORT / IMPORT ────── */
-    js = js.replace(/@import\s+"([^"]+)"\s*->\s*(\w+)/g, 'const $2 = await __ZS_IMPORT__("$1", "$2");');
-    js = js.replace(/@export\s+(\w+)/g, 'exports["$1"] = $1');
-    
-    /* ————— MAIN ———— */
-    js = js.replace(/@if\s*\((.+?)\)\s*{/g, 'if ($1) {');
-    js = js.replace(/@else\s*{/g, 'else {');
-    js = js.replace(/@for\s+(\w+)\s+in\s+(\w+)\s*{/g, 'for (const $1 of $2) {');
-    js = js.replace(/@while\s*\((.+?)\)\s*{/g, 'while ($1) {');
-    js = js.replace(/@on\s+(\w+)\s+([#.\w-]+)\s*{/g,
-    'document.querySelector("$2").addEventListener("$1", () => {');
-    js = js.replace(/@repeat\s+(\d+)\s*\{([\s\S]*?)\}/g, (_, n, body) => `for (let i = 0; i < ${n}; i++) { ${body} }`);
-
-
-    /* ————— LOCALSTORAGE / SESSION ———— */
-    js = js.replace(/@save\s+(\w+)\s*=\s*(.+)/g, 'localStorage.setItem("$1", $2)');
-    js = js.replace(/@load\s+(\w+)/g, 'localStorage.getItem("$1")');
-
-    /* ————— TIME UTILITIES ———— */
-    js = js.replace(/@interval\s+(\d+)\s*{\s*([^}]*)\s*}/g, 'setInterval(() => { $2 }, $1)');
-    js = js.replace(/@timeout\s+(\d+)\s*{\s*([^}]*)\s*}/g, 'setTimeout(() => { $2 }, $1)');
-
-    /* ————— CLASS TOGGLE ———— */
-    js = js.replace(/@toggle\s+([#.\w-]+)\s+"([^"]+)"/g, 'document.querySelector("$1").classList.toggle("$2")');
-    js = js.replace(/@addClass\s+([#.\w-]+)\s+"([^"]+)"/g, 'document.querySelector("$1").classList.add("$2")');
-    js = js.replace(/@removeClass\s+([#.\w-]+)\s+"([^"]+)"/g, 'document.querySelector("$1").classList.remove("$2")');
-
-    /* ────── CLEANUP ────── */
-    js = js.replace(/\n\s*\n/g, '\n');
-
-    return js;
-  }
-
-  const __ZS_MODULES__ = {};
-  const __ZS_EXPORTS__ = [];
-
-  async function runZS(code) {
-    try {
-      __ZS_EXPORTS__.length = 0;
-      const js = transpileZS(code);
-      const AsyncFn = Object.getPrototypeOf(async function () { }).constructor;
-      let fn;
-      try {
-        fn = new AsyncFn(
-          "exports",
-          "imported",
-          "__ZS_IMPORT__",
-          "__ZS_MODULES__",
-          "__ZS_EXPORTS__",
-          js
-        );
-      } catch (e) {
-        console.error("[ZoroonScript] Failed to construct AsyncFunction. See transpiled JS above.");
-        throw e;
-      }
-
-      const exports = {};
-      await fn(exports, __ZS_MODULES__, __ZS_IMPORT__, __ZS_MODULES__, __ZS_EXPORTS__);
-      return exports;
-    } catch (err) {
-      console.error("[ZoroonScript Runtime Error]:", err);
-      throw err;
+(()=>{"use strict";function e(e,t,s=40){let o=e.match(t);if(!o)return"";let r=o.index||0,a=Math.min(e.length,r+(o[0]?o[0].length:0)+s);return e.slice(Math.max(0,r-s),a).replace(/\n/g,"\\n").trim()}function t(t){let s=String(t),o=!!(window.ZS&&!0===window.ZS.allowLegacyJS),r=/@import\s+"([^"]+)"\s*->\s*(\w+)/g,a=[],n;for(;null!==(n=r.exec(s));)a.push({path:n[1],ns:n[2]});if(a.length){s=s.replace(r,"");let l=new Set,c="";for(let{path:i,ns:p}of a)l.has(p)||(l.add(p),c+=`let ${p};
+`,c+=`${p} = __ZS_MODULES__["${p}"] || await __ZS_IMPORT__("${i}", "${p}");
+`);s=c+"\n"+s}"undefined"==typeof ZS_TOAST&&(window.ZS_TOAST=(e,t="default")=>{let s=document.createElement("div");s.className="zs-toast zs-toast-"+t,s.textContent=e,document.body.appendChild(s),setTimeout(()=>s.classList.add("show"),10),setTimeout(()=>{s.classList.remove("show"),setTimeout(()=>s.remove(),300)},3e3)},document.head.innerHTML+=`
+  <style>
+    .zs-toast {
+      position: fixed;
+      right: 20px;
+      bottom: -60px;
+      opacity: 0;
+      padding: 12px 18px;
+      margin-top: 10px;
+      font-family: sans-serif;
+      border-radius: 8px;
+      color: white;
+      transition: all .3s ease;
+      z-index: 999999;
+      box-shadow: 0 4px 15px rgba(0,0,0,.25);
     }
-  }
-
-  async function __ZS_IMPORT__(path, ns) {
-    const res = await fetch(path);
-    if (!res.ok) {
-      throw new Error(`Failed to fetch module '${path}' (status: ${res.status})`);
+    .zs-toast.show {
+      bottom: 20px;
+      opacity: 1;
     }
-    const text = await res.text();
-    const exports = await runZS(text);
-    __ZS_MODULES__[ns] = exports;
-    window.ZS = window.ZS || {};
-    window.ZS[ns] = exports;
-    return exports;
-  }
-
-  Object.defineProperty(window, "runZS", {
-    value: runZS,
-    writable: false,
-    configurable: false
-  });
-
-  /* ────── AUTO-EXECUTE ZS SCRIPT TAGS ────── */
-  const runAuto = async () => {
-  document.querySelectorAll('script[type="application/x-opendnf-zs"]:not([data-zs-executed])')
-    .forEach(async s => {
-      s.setAttribute("data-zs-executed", "1");
-      try {
-        if (s.src) {
-          const res = await fetch(s.src);
-          const text = await res.text();
-          await runZS(text);
-        } else {
-          await runZS(s.textContent);
-        }
-      } catch (err) {
-        console.error("[ZoroonScript] Error executing ZS script tag:", err);
-      }
-    });
-};
-
-runAuto();
-
-new MutationObserver(runAuto).observe(document.documentElement, {
-  childList: true,
-  subtree: true
-});
-
-})();
+    .zs-toast-default { background: #007bff; }
+    .zs-toast-success { background: #28a745; }
+    .zs-toast-error { background: #dc3545; }
+    .zs-toast-warn { background: #ffc107; color: black; }
+  </style>
+  `);let d=/@set\s+(?!type:)\w+\s*=/m,g=/@var\s+(?!type:)\w+\s*=/m,u=/\bconsole\.(log|warn|info|error)\s*\(/m,w=/(^|\n|\r)\s*(const|let|var)\s+[A-Za-z_\$][A-Za-z0-9_\$]*\s*=/m,m=/\bwindow\.location\.(href|replace)\s*\(/m,f=/\blocalstorage\.(setItem|getItem)\s*\(/m,S=/\balert\s*\(/m,_=/(?<!@)\bfunction\b/g;if(!o){if(d.test(s))throw TypeError(`[ZoroonScript] Obsolete @set usage detected. All @set must include a type.
+Example: @set type: string myVar = "hello"
+Found snippet: ${e(s,d)}`);if(g.test(s))throw TypeError(`[ZoroonScript] Obsolete @var usage detected. All @var must include a type.
+Example: @var type: number count = 123
+Found snippet: ${e(s,g)}`);if(u.test(s))throw SyntaxError(`[ZoroonScript] Plain console.* usage detected. Use @log/@warn/@info/@error instead.
+Example: @log("hello") or @log(myVar)
+Found snippet: ${e(s,u)}`);if(w.test(s))throw TypeError(`[ZoroonScript] Plain JS variable declaration (const/let/var) detected. Use @set/@var with type.
+Example: @set type: string name = "sholeh"
+Found snippet: ${e(s,w)}`);if(f.test(s))throw SyntaxError(`[ZoroonScript] Plain localStorage usage detected. Use @save ... = "..." or @load ... instead.
+Found snippet: ${e(s,f)}`);if(m.test(s))throw SyntaxError(`[ZoroonScript] Plain window.location usage detected. Use @relocationTo = "..." or @replacePageTo = "..." instead.
+Found snippet: ${e(s,m)}`);if(S.test(s))throw SyntaxError(`
+          [ZoroonScript] Plain alert usage detected. Use @toast.success|error|warn instead.
+Found snippet: ${e(s,S)}
+          `);if(_.test(s))throw SyntaxError(`[ZoroonScript] Plain function usage detected. Use @function instead.
+Found snippet: ${e(s,_)}
+          `)}return s=(s=(s=(s=(s=(s=s.replace(/\r/g,"")).replace(/@function\s+(\w+)\s*\(([^)]*)\)\s*{\s*([\s\S]*?)\s*}/g,"function $1($2) { $3 }")).replace(/@function\s+(\w+)\s*{\s*([\s\S]*?)\s*}/g,"function $1() { $2 }")).replace(/@call\s+([^\s(]+)\s*\(([^)]*)\)/g,"$1($2)")).replace(/@call\s+([^\s(]+)/g,"$1()")).replace(/@(set|var)\s+(?:type:\s*([\w|\s]+)\s+)?(\[[^\]]+\]|[\w\$]+)\s*=\s*(.+?);?$/gm,(e,t,s,r,a)=>{let n=r.startsWith("[")&&r.endsWith("]"),l="set"===t;if(n){let c=r.slice(1,-1).split(",").map(e=>e.trim()),i=a.trim(),p=`${l?"const":"let"} [${c.join(", ")}] = [${i}];`;if(s){let d=s.split("|").map(e=>e.trim()),g=c.map(e=>{let t=d.map(t=>"any"===t?"true":"boolean"===t?`typeof ${e} === "boolean"`:"number"===t?`typeof ${e} === "number"`:"string"===t?`typeof ${e} === "string"`:"false").join(" || ");return`if (!(${t})) throw new TypeError("Variable ${e} must be of type ${s}");`}).join("\n");p+="\n"+g}else if(o)console.warn(`[ZoroonScript] Legacy array ${t} used. Consider adding type.`);else throw TypeError(`@${t} array tanpa tipe sudah obsolete! Gunakan: @${t} type: <string|number|boolean|any> [...] = [...]`);return p}{if(!s){if(o)return console.warn(`[ZoroonScript] Legacy ${t} used for "${r}" (no type).`),`${l?"const":"let"} ${r} = ${a};`;throw TypeError(`@${t} "${r}" tanpa tipe sudah obsolete! Gunakan: @${t} type: <string|number|boolean|any> ${r} = ...`)}let u=s.split("|").map(e=>e.trim()),w=u.map(e=>"any"===e?"true":"boolean"===e?`typeof ${r} === "boolean"`:"number"===e?`typeof ${r} === "number"`:"string"===e?`typeof ${r} === "string"`:"false").join(" || ");return`${l?"const":"let"} ${r} = ${a}; if (!(${w})) throw new TypeError("Variable ${r} must be of type ${s}");`}}),window.getCookie=function e(t){let s=document.cookie.match(RegExp("(^| )"+t+"=([^;]+)"));return s?s[2]:null},s=(s=(s=(s="(async () => {\n"+(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=(s=s.replace(/@element\s+([#.\w-]+)\s*{\s*text\s+"([^"]+)"\s*}/g,'document.querySelector("$1").textContent = "$2"')).replace(/@element\s+([#.\w-]+)\s*{\s*html\s+"([^"]+)"\s*}/g,'document.querySelector("$1").innerHTML = "$2"')).replace(/@id\s+#([\w-]+)/g,'document.getElementById("$1")')).replace(/@select\s+([#.][\w-]+)/g,'document.querySelector("$1")')).replace(/@all\s+([#.][\w-]+)/g,'document.querySelectorAll("$1")')).replace(/append\s+"([^"]+)"/g,'insertAdjacentHTML("beforeend", "$1")')).replace(/@on\s+(\w+)\s+([#.\w-]+)\s*{\s*log\s+"([^"]+)"\s*}/g,'document.querySelector("$2").addEventListener("$1", () => console.log("$3"))')).replace(/@on\s+(\w+)\s+([#.\w-]+)\s*{\s*([\s\S]*?)\s*}/g,'document.querySelector("$2").addEventListener("$1", () => { $3 })')).replace(/@log\s+"([^"]+)"/g,'console.log("$1")')).replace(/@warn\s+"([^"]+)"/g,'console.warn("$1")')).replace(/@info\s+"([^"]+)"/g,'console.info("$1")')).replace(/@error\s+"([^"]+)"/g,'console.error("$1")')).replace(/@log\s*\(\s*([^)]+)\s*\)/g,"console.log($1)")).replace(/@warn\s*\(\s*([^)]+)\s*\)/g,"console.warn($1)")).replace(/@info\s*\(\s*([^)]+)\s*\)/g,"console.info($1)")).replace(/@error\s*\(\s*([^)]+)\s*\)/g,"console.error($1)")).replace(/text\s+"([^"]+)"/g,'"$1"')).replace(/html\s+"([^"]+)"/g,'"$1"')).replace(/@export\s+(\w+)/g,(e,t)=>`exports["${t}"] = ${t};`)).replace(/@relocationTo\s*=\s*"([^"]+)"/g,'window.location.href = "$1";')).replace(/@replacePageTo\s*=\s*"([^"]+)"/g,'window.location.replace("$1");')).replace(/@if\s*\(([\s\S]+?)\)\s*{/g,"if ($1) {")).replace(/@else\s*{/g,"else {")).replace(/@for\s+(\w+)\s+in\s+(\w+)\s*{/g,"for (const $1 of $2) {")).replace(/@while\s*\(([\s\S]+?)\)\s*{/g,"while ($1) {")).replace(/@repeat\s+(\d+)\s*\{([\s\S]*?)\}/g,"for (let i = 0; i < $1; i++) { $2 }")).replace(/@save\s+(\w+)\s*=\s*([\s\S]+?)\s*(?=$|\n|;)/g,'localStorage.setItem("$1", $2);')).replace(/@load\s+(\w+)/g,'localStorage.getItem("$1")')).replace(/@cookie\.set\s*=\s*([\s\S]+?)\s*(?=$|\n|;)/g,"document.cookie = $1;")).replace(/@cookie\.get\s+(\w+)/g,'getCookie("$1")')).replace(/@cookie\.hasCookie\s+(\w+)/g,'document.cookie.includes("$1=")')).replace(/@cookie\.delete\s+(\w+)\s*\|\s*([\s\S]+?)\s*\|\s*([\s\S]+?)\s*(?=$|\n|;)/g,'document.cookie = "$1=; expires=$2; path=$3";')).replace(/@sessionData\.setData\s+(\w+)\s*=\s*([^\n]+)/g,'sessionStorage.setItem("$1", "$2");')).replace(/@sessionData\.getData\s+(\w+)/g,'sessionStorage.getItem("$1")')).replace(/@sessionData\.removeData\s+(\w+)/g,'sessionStorage.removeItem("$1");')).replace(/@sessionData\.clearData/g,"sessionStorage.clear();")).replace(/@fecth\.methodGET\s+"([^"]+)"\.json\(\)\.then\(@log\(\)\)/g,'console.log(await (await fetch("$1")).json())')).replace(/@fecth\.methodGET\s+"([^"]+)"\.json\(\)/g,'await (await fetch("$1")).json()')).replace(/@fecth\.methodGET\s+"([^"]+)"\.json\(\)/g,'await (await fetch("$1")).json()')).replace(/@fecth\.show\((\w+)\)\s+"([^"]+)".showToPage\(\)/g,`const $1 = await (await fetch("$2")).json();
+   $1.forEach(item => {
+     document.body.innerHTML += \`
+       <div style="border:1px solid #ccc; margin:10px; padding:10px">
+         <h3>\${item.title || item.name}</h3>
+         <p>\${item.description || ""}</p>
+         <strong>$\${item.price || "??"}</strong>
+       </div>
+     \`;
+   });`)).replace(/@on\.online\s*\{([\s\S]*?)\}/g,'window.addEventListener("online", () => { $1 });')).replace(/@on\.offline\s*\{([\s\S]*?)\}/g,'window.addEventListener("offline", () => { $1 });')).replace(/@toast\s+"([^"]+)"/g,'ZS_TOAST("$1", "default")')).replace(/@toast\.success\s+"([^"]+)"/g,'ZS_TOAST("$1", "success")')).replace(/@toast\.error\s+"([^"]+)"/g,'ZS_TOAST("$1", "error")')).replace(/@toast\.warn\s+"([^"]+)"/g,'ZS_TOAST("$1", "warn")')).replace(/@timeout\s+(\d+)\s*\{([\s\S]*?)\}/g,"setTimeout(() => { $2 }, $1);")).replace(/@interval\s+(\d+)\s*\{([\s\S]*?)\}/g,"setInterval(() => { $2 }, $1);")).replace(/(\w+)\s*=\s*@interval\s+(\d+)\s*\{([\s\S]*?)\}/g,"$1 = setInterval(() => { $3 }, $2);")).replace(/@interval\.cancel\s+(\w+)/g,"clearInterval($1);")).replace(/@timeout\.cancel\s+(\w+)/g,"clearTimeout($1);")).replace(/(\w+)\s*=\s*@timeout\s+(\d+)\s*\{([\s\S]*?)\}/g,"$1 = setTimeout(() => { $3 }, $2);"))+"\n})();").replace(/@on\s+(\w+)\s+([#.\w-]+)\s*{/g,'document.querySelector("$2").addEventListener("$1", () => {')).replace(/(\w+)\s*=\s*@debounce\s+(\d+)\s*\((\w+)\)/g,"$1 = debounce($3, $2);")).replace(/\n\s*\n/g,"\n")}let s={},o=[];async function r(e){try{o.length=0;let r=t(e),n=Object.getPrototypeOf(async function(){}).constructor,l;try{l=new n("exports","imported","__ZS_IMPORT__","__ZS_MODULES__","__ZS_EXPORTS__",r)}catch(c){throw console.error("[ZoroonScript] Failed to construct AsyncFunction. See transpiled JS below:\n",r),c}let i={};return await l(i,s,a,s,o),i}catch(p){throw console.error("[ZoroonScript Runtime Error]:",p),p}}async function a(e,t){if(s[t])return s[t];let o=await fetch(e);if(!o.ok)throw Error(`Failed to fetch module '${e}' (status: ${o.status})`);let a=await o.text(),n=await r(a);return s[t]=n,window.ZS=window.ZS||{},window.ZS[t]=n,n}Object.defineProperty(window,"runZS",{value:r,writable:!1,configurable:!1});let n=async()=>{document.querySelectorAll('script[type="application/x-opendnf-zs"]:not([data-zs-executed])').forEach(async e=>{e.setAttribute("data-zs-executed","1");try{if(e.src){let t=await fetch(e.src),s=await t.text();await r(s)}else await r(e.textContent)}catch(o){console.error("[ZoroonScript] Error executing ZS script tag:",o)}})};n(),new MutationObserver(n).observe(document.documentElement,{childList:!0,subtree:!0})})();
